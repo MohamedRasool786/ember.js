@@ -62,17 +62,26 @@ module.exports = buildInfo;
  * @returns {BuildInfo}
  */
 function buildFromParts(packageVersion, gitInfo) {
+  // Travis builds are always detached
+  let tag = gitInfo.tag || process.env.TRAVIS_TAG;
+  let tagVersion = parseTagVersion(tag);
+
+  let branch = gitInfo.branch || process.env.TRAVIS_BRANCH;
   let sha = gitInfo.sha;
   let shortSha = sha.slice(0, 8);
-  let branch = gitInfo.branch;
-  let tag = gitInfo.tag;
+
+  // TRAVIS_PULL_REQUEST:
+  // The pull request number if the current job is a pull request,
+  // “false” if it’s not a pull request.
+  let TRAVIS_PULL_REQUEST = process.env.TRAVIS_PULL_REQUEST;
+  let isPR = TRAVIS_PULL_REQUEST && TRAVIS_PULL_REQUEST !== 'false';
 
   let channel =
-    branch === 'master'
-      ? process.env.BUILD_TYPE === 'alpha' ? 'alpha' : 'canary'
-      : branch && escapeSemVerIdentifier(branch);
-
-  let tagVersion = parseTagVersion(tag);
+    isPR || tagVersion
+      ? null
+      : branch === 'master'
+        ? process.env.BUILD_TYPE === 'alpha' ? 'alpha' : 'canary'
+        : branch && escapeSemVerIdentifier(branch);
 
   let version = tagVersion || buildVersion(packageVersion, channel, shortSha);
 
